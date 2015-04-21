@@ -1,0 +1,30 @@
+# Dependencies
+markdown:         kramdown
+highlighter:      rouge
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Permalinks
+permalink:        none
+relative_permalinks: true
+
+# Setup
+title:            Ryan Walder
+tagline:          'The rambling of a Linux admin'
+description:      'The rambling of a Linux admin with DevOps tendencies.'
+url:              http://www.ryanwalder.com
+baseurl:          /
+
+author:
+  name:           'Ryan Walder'
+  url:            http://www.ryanwalder.com
+
+paginate:         10
+
+# Custom vars
+github:
+  repo:           https://github.com/ryanwalder
+
+twitter:          https://twitter.com/zombietwiglet

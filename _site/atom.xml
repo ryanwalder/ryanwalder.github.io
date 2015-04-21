@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+ <title>Ryan Walder</title>
+ <link href="http://www.ryanwalder.com/atom.xml" rel="self"/>
+ <link href="http://www.ryanwalder.com/"/>
+ <updated>2015-04-21T23:02:01+01:00</updated>
+ <id>http://www.ryanwalder.com</id>
+ <author>
+   <name>Ryan Walder</name>
+   <email></email>
+ </author>
+
+ 
+ <entry>
+   <title>Using Vagrant for SaltStack States Development</title>
+   <link href="http://www.ryanwalder.com/vagrant-saltstack-development"/>
+   <updated>2015-04-21T00:00:00+01:00</updated>
+   <id>http://www.ryanwalder.com/vagrant-and-statstack</id>
+   <content type="html">&lt;p&gt;I won’t get too deep on the subject of why Vagrant is a great tool for development, Darren Beale has a great &lt;a href=&quot;http://24ways.org/2014/what-is-vagrant-and-why-should-i-care/&quot;&gt;writeup&lt;/a&gt; on the subject, while it’s more development based it still holds true for developing your Salt states. The TL;DR is that &lt;a href=&quot;https://www.vagrantup.com&quot;&gt;Vagrant&lt;/a&gt; gives us the ability to spin up machines then tear them down as needed, this is great for writing config management states as you can plug on through getting a system configured, tear the machine down then reprovision it from scratch.&lt;/p&gt;
+
+&lt;h2 id=&quot;vagrant-and-lxc&quot;&gt;Vagrant and lxc&lt;/h2&gt;
+
+&lt;p&gt;I use a slightly modified version of Vagrant in that I use LXC containers for my development machines rather than VirtualBox machines, this gives me a faster startup time for my machines and they use a lot less system resources while still giving me a full system to work on.&lt;/p&gt;
+
+&lt;h2 id=&quot;installing-vagrant--plugins&quot;&gt;Installing Vagrant &amp;amp; Plugins&lt;/h2&gt;
+&lt;p&gt;I use Ubuntu 14.04 as my day to day work machine so these commands targeted to it, if you use another distro or run a later version things may differ slightly, we need a newer version of Vagrant than is in the standard Ubuntu repo’s so we’ll be grabbing it directly from the &lt;a href=&quot;https://www.vagrantup.com/downloads.html&quot;&gt;site&lt;/a&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb
+sudo dpkg -i vagrant_1.7.2_x86_64.deb
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now we have vagrant installed we need a few extra packages to get LXC working as our provider:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo apt-get update
+sudo apt-get install sudo apt-get install lxc lxc-templates redir cgroup-lite git-core
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now to install a couple of Vagrant plugins to allow us to get going:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;vagrant plugin install vagrant-lxc
+vagrant plugin install salty-vagrant-grains
+vagrant plugin install vagrant-cachier
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;vagrant-cachier is not required but it can &lt;a href=&quot;http://fgrehm.viewdocs.io/vagrant-cachier/benchmarks&quot;&gt;speed up&lt;/a&gt; the time it takes to spin up boxes by caching commonly used packages, I use it on a per machine basis in this setup which beans caches will survive across destroying a named machine (say “saltmaster”) which means destroying and spinning up machines gets a bit faster.&lt;/p&gt;
+
+&lt;h2 id=&quot;setting-up-vagrant&quot;&gt;Setting up Vagrant&lt;/h2&gt;
+&lt;p&gt;We need to grab the repo with the Vagrantfile in, this contains everything we need to develop salt states in Vagrant including a Salt Master and the ability to define minions within a YAML file which makes defining new machines a breeze&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;git clone https://github.com/ryanwalder/saltstack-lxc-vagrant
+cd saltstack-lxc-vagrant
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;For the purpose of this post we’ll be using the example states/pillars provided in the example folder of the repo, this will setup 4 nginx boxes behind a hapoxy box.&lt;/p&gt;
+
+&lt;p&gt;We need to set a few environmental variables which point to our salt states and salt pillar directories, these folders will be mounted into the container at /srv/salt and /srv/pillar which are then in turn used by the Salt Master.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;export VLS_STATES=&quot;example/states&quot;
+export VLS_PILLAR=&quot;example/pillar&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now we just need to copy the example minions.yaml into place and we can get going:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cp minions.yaml.example minions.yaml
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;First we will fire up the Salt Master, as we are using LXC as our provider we need to specify this:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;vagrant up saltmaster --provider=lxc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;If like me you like minimising keystrokes we can set Vagrant to use LXC by default with:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;export VAGRANT_DEFAULT_PROVIDER=lxc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;After a few minutes you’ll have a fully working Salt Master ready to provision systems you can check this out by jumping onto the machine, one on you can check out the shares states &amp;amp; pillar folders.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;vagrant ssh saltmaster
+ls /srv/salt
+ls /srv/pillar
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;As you can see the folders in &lt;code class=&quot;highlighter-rouge&quot;&gt;example/states&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;example/pillar&lt;/code&gt; are shared from the host which means we can edit files on our local machine from the comfort of your own environment and have them immediately available on the Salt Master ready to deploy.&lt;/p&gt;
+
+&lt;h2 id=&quot;firing-up-the-minions&quot;&gt;Firing up the minions&lt;/h2&gt;
+
+&lt;p&gt;Check the status of out vagrant setup you can use &lt;code class=&quot;highlighter-rouge&quot;&gt;vagrant status&lt;/code&gt; which will give something like the below:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Current machine states:
+
+saltmaster                running (lxc)
+nginx-001                 not created (lxc)
+nginx-002                 not created (lxc)
+nginx-003                 not created (lxc)
+nginx-004                 not created (lxc)
+haproxy                   not created (lxc)
+
+This environment represents multiple VMs. The VMs are all listed
+above with their current state. For more information about a specific
+VM, run `vagrant status NAME`.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;The saltmaster is already running which means rather than spinning up each box individually we can just bring them all up at once with &lt;code class=&quot;highlighter-rouge&quot;&gt;vagrant up&lt;/code&gt; rather than &lt;code class=&quot;highlighter-rouge&quot;&gt;vagrant up nginx-001&lt;/code&gt;, this only works once the saltmaster box is up otherwise you’ll have a race condition between the minions and the master where if they come up before the master things can get out of step which need the minions restarting, which is no fun.&lt;/p&gt;
+
+&lt;p&gt;As you can see from the &lt;code class=&quot;highlighter-rouge&quot;&gt;minions.yaml&lt;/code&gt; config file the nginx boxes will run a highstate on being provisioned but the haproxy boxes does not so you’ll need to jump on the box and run a highstate manually.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;vagrant ssh haproxy
+sudo salt-call state.highstate
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;You should see Salt install and configure haproxy so now you can go to &lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.3.15&lt;/code&gt; where you should be able to refresh the page and see haproxy rotate through the first 3 nginx boxes we previously setup, you can also see that the 3 nodes are talking to haproxy by going to &lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.3.15:1936&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;working-on-salt-states&quot;&gt;Working on salt states&lt;/h2&gt;
+
+&lt;p&gt;Now we need to update haproxy to use the 4th nginx node, while we could add the 4th node to the haproxy config manually but the better way would be to use &lt;a href=&quot;http://docs.saltstack.com/en/latest/topics/mine/&quot;&gt;Salt Mine&lt;/a&gt;, as you can see in &lt;code class=&quot;highlighter-rouge&quot;&gt;example/pillar/nginx/init.sls&lt;/code&gt; we are already exporting the eth1 IP address of the nginx nodes via the salt mine so we can use this in the haproxy config. I’ve included a jinja templated config which does this so you just need to edit the &lt;code class=&quot;highlighter-rouge&quot;&gt;example/states/haproxy/init.sls&lt;/code&gt; state file in the git repo to include “.jinja” to the end of the file.managed source line:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;s&quot;&gt;haproxy&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;pkg&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;latest&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;file&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;managed&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;/etc/haproxy/haproxy.cfg&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;source&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;salt://haproxy/files/haproxy.cfg.jinja&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;template&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;jinja&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;user&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;root&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;group&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;root&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;644&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;pkg&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;haproxy&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;watch_in&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;service&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;haproxy&lt;/span&gt;
+  &lt;span class=&quot;s&quot;&gt;service&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;running&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;enable&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;True&lt;/span&gt;
+    &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;file&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;enable-haproxy-service&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This will now use the templated file for setting up the haproxy config so we just need to run a highstate on the haproxy box again:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;vagrant ssh haproxy
+sudo salt-call state.highstate
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Once Salt has done it’s thing you can now check it has been added to the haproxy config by checking out the web frontend at &lt;code class=&quot;highlighter-rouge&quot;&gt;10.0.3.15:1936&lt;/code&gt; again and you should now see all 4 minions being load balanced, no editing files remotely, no having to pull anything onto the master just a really quick edit to your states and they are available to deploy to the minions immediately, this gives us that quick feedback loop we need when building our states with the ability to start from scratch whenever we need with only a few commands.&lt;/p&gt;
+
+&lt;p&gt;Now we have the states in their “final” setup it’s good to get in the habit of destroying the minions and re-provisioning them from scratch to make sure the states work from on fresh systems, this doesn’t affect the examples as much as full state development where you’ll be running states multiple times before nailing things down which can lead to states which only work after multiple runs due to the ordering of the states.&lt;/p&gt;
+
+&lt;h2 id=&quot;notes&quot;&gt;Notes&lt;/h2&gt;
+
+&lt;p&gt;Vagrant keeps track of the containers it’s using based on the config you’re using so if you remove a box from the minions.yaml that is still running vagrant will not keep track of it any more so it’s best practice to make liberal use of &lt;code class=&quot;highlighter-rouge&quot;&gt;vagrant status&lt;/code&gt; as you go along to keep track of what’s running and make sure to &lt;code class=&quot;highlighter-rouge&quot;&gt;vagrant destroy&lt;/code&gt; boxes before taking them out of the &lt;code class=&quot;highlighter-rouge&quot;&gt;minions.yaml&lt;/code&gt;. You can always check what containers you have running at any given time by using &lt;code class=&quot;highlighter-rouge&quot;&gt;sudo lxc-ls&lt;/code&gt; and if you need to kill off errant containers you forgot to destroy before removing them from the YAMl file you can destroy them directly with lxc directly:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo lxc-stop --name container-name
+sudo lxc-destroy --name container-name
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;And if you just want to nuke everything from orbit:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;for i in $(sudo lxc-ls); do sudo lxc-stop --name $i; sudo lxc-destroy --name $i; done
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</content>
+ </entry>
+ 
+
+</feed>
