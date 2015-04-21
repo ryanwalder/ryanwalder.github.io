@@ -87,7 +87,7 @@ As you can see from the `minions.yaml` config file the nginx boxes will run a hi
     vagrant ssh haproxy
     sudo salt-call state.highstate
 
-You should see Salt install and configure haproxy so now you can go to `10.0.3.15` where you should be able to refresh the page and see haproxy rotate through the first 3 nginx boxes we previously setup, you can also see that the 3 nodes are talking to haproxy by going to `10.0.3.15:1936` (username/password: someuser:password).
+You should see Salt install and configure haproxy so now you can go to `10.0.3.15` where you should be able to refresh the page and see haproxy rotate through the first 3 nginx boxes we previously setup, you can also see that the 3 nodes are talking to haproxy by going to `10.0.3.15:1936` (username/password: someuser/password).
 
 ## Working on salt states
 
