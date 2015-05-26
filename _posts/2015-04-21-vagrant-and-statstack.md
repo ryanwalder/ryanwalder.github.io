@@ -26,9 +26,6 @@ Now to install a couple of Vagrant plugins to allow us to get going:
 
     vagrant plugin install vagrant-lxc
     vagrant plugin install salty-vagrant-grains
-    vagrant plugin install vagrant-cachier
-
-vagrant-cachier is not required but it can [speed up](http://fgrehm.viewdocs.io/vagrant-cachier/benchmarks) the time it takes to spin up boxes by caching commonly used packages, I use it on a per machine basis in this setup which beans caches will survive across destroying a named machine (say "saltmaster") which means destroying and spinning up machines gets a bit faster.
 
 ## Setting up Vagrant
 We need to grab the repo with the Vagrantfile in, this contains everything we need to develop salt states in Vagrant including a Salt Master and the ability to define minions within a YAML file which makes defining new machines a breeze
