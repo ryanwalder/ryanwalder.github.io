@@ -22,6 +22,8 @@ author:
 
 paginate:         10
 
+future: false
+
 # Custom vars
 github:
   repo:           https://github.com/ryanwalder
